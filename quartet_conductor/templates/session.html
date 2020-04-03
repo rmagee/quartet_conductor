@@ -1,0 +1,15 @@
+{% extends "index.html" %}
+{% load material_form %}
+{% block content %}
+
+<form action="/conductor/session/" method="post">
+  {% form %}
+  {% csrf_token %}
+  {{ form }}
+  {% endform %}
+  <input type="submit" value="Start" class="btn">
+</form>
+
+{% endblock %}
+
+

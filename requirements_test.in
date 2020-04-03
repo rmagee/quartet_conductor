@@ -1,0 +1,8 @@
+coverage
+mock
+flake8
+tox
+codecov
+sphinx_rtd_theme
+sphinx
+recommonmark
