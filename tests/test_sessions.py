@@ -12,6 +12,12 @@ class TestSessions(TestCase):
         session.create_session('ASDF123',
                                '012670')
 
+    def test_a_start_session_twice(self):
+        with self.assertRaises(session.SessionError):
+            session.create_session('ASDF123',
+                                   '012670')
+            session.create_session('ASDF123',
+                                   '012670')
 
     def test_b_get_session(self):
         for i in range(1,200):
