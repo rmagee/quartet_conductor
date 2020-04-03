@@ -8,15 +8,18 @@ from quartet_conductor import session
 
 class TestSessions(TestCase):
 
-    def setUp(self):
-        session.create_session_db()
-
     def test_a_start_session(self):
-        session.start_session('ASDF123', '012670')
+        session.create_session('ASDF123',
+                               '012670')
+
 
     def test_b_get_session(self):
         for i in range(1,200):
-            session.get_session()
+            cur_session = session.get_session()
+            print(cur_session.lot)
+            print(cur_session.expiry)
+            print(cur_session.state)
+            print(cur_session.created)
 
     def tearDown(self):
         pass

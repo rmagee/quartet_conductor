@@ -3,8 +3,8 @@
 {% block content %}
 
 <form action="/conductor/session/" method="post">
-  {% form %}
   {% csrf_token %}
+  {% form %}
   {{ form }}
   {% endform %}
   <input type="submit" value="Start" class="btn">

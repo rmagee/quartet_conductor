@@ -2,9 +2,9 @@
 from django.conf.urls import url
 from django.views.generic import TemplateView
 
-from . import views
+from quartet_conductor import views
 
 urlpatterns = [
-    url(r'running/', TemplateView.as_view(template_name="session_info.html")),
-    url(r'session/', views.start_session)
+    url(r'^running/?$', views.session_info),
+    url(r'^session/?$', views.start_session)
     ]
