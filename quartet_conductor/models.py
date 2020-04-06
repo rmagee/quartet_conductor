@@ -19,6 +19,7 @@ class Session(models.Model):
         max_length=20,
         null=False,
         blank=False,
+        unique=True,
         verbose_name=_('Lot'),
         help_text=('The session lot number')
     )
@@ -47,6 +48,12 @@ class Session(models.Model):
     def create_session(cls, session):
         with cls._session_lock:
             cls._session = session
+            cls._session.save()
+
+    @classmethod
+    def clear_session(cls):
+        with cls._session_lock:
+            cls._session = None
 
     @classmethod
     def get_session(cls):

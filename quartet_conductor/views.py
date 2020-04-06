@@ -11,22 +11,26 @@ logger = getLogger(__name__)
 
 def start_session(request: HttpRequest):
     if request.method == 'POST':
-        form = SessionForm(request.POST)
-        if form.is_valid():
-            session.start_session(request.POST.get('lot'),
-                                  request.POST.get('expiry'))
-            return HttpResponseRedirect('/conductor/running/')
+        try:
+            form = SessionForm(request.POST)
+            if form.is_valid():
+                session.start_session(request.POST.get('lot'),
+                                      request.POST.get('expiry'))
+                return HttpResponseRedirect('/conductor/running/')
+        except session.SessionRunningError:
+            return HttpResponseRedirect('/conductor/session/')
     else:
         form = SessionForm()
-        session.create_session_db()
+
     return render(request, 'session.html', {'form': form})
 
 
 def session_info(request: HttpRequest):
     if request.method == 'GET':
         current_session = session.get_session()
-        if not session:
-            return HttpResponseRedirect('/session/')
+        if not current_session:
+            return HttpResponseRedirect('/conductor/session/')
         else:
+            form = SessionForm(instance=current_session)
             return render(request, "session_info.html",
-                          {'session': current_session})
+                          {'session': current_session, 'form': form})
