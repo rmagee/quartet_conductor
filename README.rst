@@ -1,64 +1,39 @@
-=============================
+-----------------
 quartet_conductor
-=============================
-
-.. image:: https://gitlab.com/serial-lab/quartet_conductor/badges/master/coverage.svg
-   :target: https://gitlab.com/serial-lab/quartet_conductor/pipelines
-.. image:: https://gitlab.com/serial-lab/quartet_conductor/badges/master/build.svg
-   :target: https://gitlab.com/serial-lab/quartet_conductor/commits/master
-.. image:: https://badge.fury.io/py/quartet_conductor.svg
-    :target: https://badge.fury.io/py/quartet_conductor
-
+-----------------
 Python module for machine and IoT interfaces.
 
-Documentation
--------------
 
-The full documentation is at https://serial-lab.gitlab.io/quartet_conductor/
+=====
+Hosts
+=====
 
-Quickstart
-----------
+For testing and deployment using this in general, the host names that are used
+in the unit tests and default configurations are as follows:
 
-Install quartet_conductor::
+* scanner
+* printer
+* revpi
 
-    pip install quartet_conductor
+You can add these host names to your hosts file with the appropriate
+IP addresses and you should be good to go.
 
-Add it to your `INSTALLED_APPS`:
+=================
+VideoJet Port 777
+=================NO
 
-.. code-block:: python
+The videojet printer needs to have it's text communications port
+set to a non-zero value.  For conductor, it assumes you have set
+the port to 777.  Please use this port to avoid any confusiont
 
-    INSTALLED_APPS = (
-        ...
-        'quartet_conductor.apps.QuartetConductorConfig',
-        ...
-    )
+Label Fields
+============
 
-Add quartet_conductor's URL patterns:
+The default label fields are as follows:
 
-.. code-block:: python
+* LOT - The lot number
+* EXPIRY - The expiration date
+* GTIN - The GTIN field.
+* SERIAL_NUMBER - The serial number field.
 
-    from quartet_conductor import urls as quartet_conductor_urls
-
-
-    urlpatterns = [
-        ...
-        url(r'^', include(quartet_conductor_urls)),
-        ...
-    ]
-
-Features
---------
-
-* TODO
-
-Running Tests
--------------
-
-Does the code actually work?
-
-::
-
-    source <YOURVIRTUALENV>/bin/activate
-    (myenv) $ pip install tox
-    (myenv) $ tox
-
+Any other fields are fine but will be ignored.

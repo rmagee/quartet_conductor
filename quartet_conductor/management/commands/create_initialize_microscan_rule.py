@@ -41,10 +41,19 @@ class Command(BaseCommand):
         )
         # ask the printer for details
         printer_query_step = models.Step.objects.create(
-            name='Render Printer Commands',
-            description='Renders the videojet initialization template.',
+            name='Get Job Fields',
+            description='Pulls the job fields from the printer.',
             step_class='quartet_conductor.videojet.steps.JobFieldsStep',
             order=1,
+            rule=rule
+        )
+        # place the serial identifier on the context
+        serial_id_step = models.Step.objects.create(
+            name='Get Serial Identifier',
+            description='Pulls the GTIN or SSCC value out of the job fields '
+                        'and puts onto the context.',
+            step_class='quartet_conductor.videojet.steps.GetSerialIdentifierStep',
+            order=5,
             rule=rule
         )
         # formulate the match string command for the scanner
@@ -52,7 +61,7 @@ class Command(BaseCommand):
             name='Create match string command.',
             description='Creates the match string command for the reader.',
             step_class='quartet_conductor.microscan.steps.MatchStringCommandStep',
-            order=2,
+            order=10,
             rule=rule
         )
         # use the template to render the scanner commands format
@@ -60,7 +69,7 @@ class Command(BaseCommand):
             name='Render Initialization Commands',
             description='Renders the microscan template.',
             step_class='quartet_conductor.steps.TemplateStep',
-            order=3,
+            order=15,
             rule=rule
         )
         template_parameter = models.StepParameter.objects.create(
@@ -74,7 +83,7 @@ class Command(BaseCommand):
             description='Uses telnet session to send data to a TCP endpoint',
             step_class='quartet_conductor.steps.TelnetStep',
             rule = rule,
-            order=4
+            order=20
         )
         models.StepParameter.objects.create(
             name='Host',

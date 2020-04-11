@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.db import models
 from django.utils.translation import gettext as _
+from quartet_capture.models import Rule
 from datetime import datetime
 
 import threading
@@ -61,3 +62,25 @@ class Session(models.Model):
             return cls._session
 
 
+class InputMap(models.Model):
+    models.PositiveSmallIntegerField(
+        blank=False,
+        null=False,
+        verbose_name=_('Input Number'),
+        help_text=_('The input number to map the rule and input text to.')
+    )
+    models.ForeignKey(
+        Rule,
+        null=False,
+        blank=False,
+        verbose_name=_('Rule'),
+        help_text=_('The rule to execute when the input is high.'),
+        on_delete=models.CASCADE
+    )
+    models.TextField(
+        null=True,
+        blank=True,
+        verbose_name=_('Rule Data'),
+        help_text=_('Any data to send to the rule when running it. The format'
+                    'depends on what the rule expects. ')
+    )

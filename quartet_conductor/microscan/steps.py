@@ -70,3 +70,19 @@ class MatchStringCommandStep(Step):
 
     def on_failure(self):
         self.info('On failured called.')
+
+
+class StartSessionStep(Step):
+    """
+    Clears out any existing sessions and starts a new one with the
+    current host/initiator.
+    """
+    def execute(self, data, rule_context: RuleContext):
+        pass
+
+    @property
+    def declared_parameters(self):
+        return {}
+
+    def on_failure(self):
+        self.info('On failured called.')
