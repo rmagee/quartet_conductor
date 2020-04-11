@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2019 SerialLab Corp.  All rights reserved.
+# Copyright 2020 SerialLab Corp.  All rights reserved.
 
 from revpy_dio.inputs import InputMonitor as IM
 from quartet_conductor.session import start_session

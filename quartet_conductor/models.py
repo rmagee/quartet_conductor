@@ -60,5 +60,4 @@ class Session(models.Model):
         with cls._session_lock:
             return cls._session
 
-class SessionField(models.Model):
-    pass
+

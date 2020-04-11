@@ -24,6 +24,8 @@ INSTALLED_APPS = [
     "django.contrib.sites",
     'rest_framework',
     'material',
+    'quartet_capture',
+    'quartet_templates',
     "quartet_conductor",
 ]
 

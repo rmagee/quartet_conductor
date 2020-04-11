@@ -6,3 +6,7 @@ codecov
 sphinx_rtd_theme
 sphinx
 recommonmark
+quartet_capture
+django-model-utils
+Jinja2
+celery

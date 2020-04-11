@@ -11,19 +11,4 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright 2019 SerialLab Corp.  All rights reserved.
-
-import binascii
-
-
-def convert_command_value(command_value: str) -> str:
-    """
-    Converts command strings for the scanners into the ascii hex the scanner
-    expects
-    :param command: The command value to convert.
-    :return: A converted command value.
-    """
-    return str(binascii.hexlify(command_value.encode('ascii')))[2:].replace("'", "")
-
-
-
+# Copyright 2020 SerialLab Corp.  All rights reserved.
