@@ -25,7 +25,7 @@ from logging import getLogger
 logger = getLogger(__name__)
 
 
-class CONTEXT_FIELDS(Enum):
+class ContextFields(Enum):
     """
     JOB FIELDS
     ==========
@@ -33,7 +33,7 @@ class CONTEXT_FIELDS(Enum):
     context key
 
     PRINTER_HOST
-    ====
+    ============
     The printer host name will be added to the context under this value.
 
     PRINTER_PORT
@@ -41,23 +41,34 @@ class CONTEXT_FIELDS(Enum):
     The TCP port of the text communications to the printer will be added
     to the context with this value as an integer.
 
-    SERIAL IDENTIFIER
+    SERIAL_IDENTIFIER
     =================
     Usually the GTIN or SSCC/Company prefix field within a label.  This
     value is used to place a serialbox machine_name for a pool onto the
     context from a labe/job.
+
+    IO_PORT
+    =======
+    If the printer will be responding to IO port input signals to print,
+    then supply the IO block input number here.  This can be used by other
+    components that need to access the printer to understand which printer to
+    use when input signals are detected.
 
     """
     JOB_FIELDS = 'JOB_FIELDS'
     PRINTER_HOST = 'PRINTER_HOST'
     PRINTER_PORT = 'PRINTER_PORT'
     SERIAL_IDENTIFIER = 'SERIAL_IDENTIFIER'
+    IO_PORT = 'IO_PORT'
 
 
 class JobFieldsStep(TelnetStep):
     """
     Will issue a telnet command and then read the reply and return
     to the channel as the data.
+
+    This Step will also add the printer host and port to the context along
+    with the IO Port that it will respond to for print commands.
     """
 
     def __init__(self, db_task: models.Task, **kwargs):
@@ -69,6 +80,10 @@ class JobFieldsStep(TelnetStep):
         self.port = int(self.get_or_create_parameter(
             'Port', '777',
             'The text communications port that was enabled on the printer.'
+        ))
+        self.input_port = int(self.get_or_create_parameter(
+            'IO Port', '2',
+            'The input port that the printer will respond to if applicable.'
         ))
 
     def execute(self, data, rule_context: RuleContext):
@@ -87,11 +102,18 @@ class JobFieldsStep(TelnetStep):
                     name, val = item.split("=")
                     dict[name] = val
             self.info('Fields: %s', dict)
-            rule_context.context[CONTEXT_FIELDS.JOB_FIELDS.value] = dict
-            rule_context.context[CONTEXT_FIELDS.PRINTER_HOST.value] = self.host
-            rule_context.context[CONTEXT_FIELDS.PRINTER_PORT.value] = self.port
+            rule_context.context[ContextFields.JOB_FIELDS.value] = dict
+            rule_context.context[ContextFields.PRINTER_HOST.value] = self.host
+            rule_context.context[ContextFields.PRINTER_PORT.value] = self.port
+            rule_context.context[ContextFields.IO_PORT.value] = self.input_port
             logger.info('Rule Context: %s', rule_context.context)
             self.info('%s: %s', __name__, rule_context.context)
+
+    @property
+    def declared_parameters(self):
+        parms = super().declared_parameters()
+        parms['IO Port'] = 'The input port that the printer will respond to ' \
+                           'if applicable.'
 
 
 class NoJobFieldsError(Exception):
@@ -118,7 +140,7 @@ class GetSerialIdentifierStep(Step):
         )
 
     def execute(self, data, rule_context: RuleContext):
-        job_fields = rule_context.context.get(CONTEXT_FIELDS.JOB_FIELDS.value,
+        job_fields = rule_context.context.get(ContextFields.JOB_FIELDS.value,
                                               None)
         if not job_fields:
             raise NoJobFieldsError('There are no job fields in the context.'
@@ -133,7 +155,7 @@ class GetSerialIdentifierStep(Step):
         self.info('Placing %s on the context for serial identifier',
                   serial_identifier)
         rule_context.context[
-            CONTEXT_FIELDS.SERIAL_IDENTIFIER.value] = serial_identifier
+            ContextFields.SERIAL_IDENTIFIER.value] = serial_identifier
         return data
 
     def on_failure(self):
@@ -146,3 +168,20 @@ class GetSerialIdentifierStep(Step):
                                        "serial portion of the label being "
                                        "printed."
         }
+
+
+class StartSessionStep(Step):
+    """
+    Clears out any existing sessions and starts a new one with the
+    current printer, serial identifier and IO port ready for lookup.
+    """
+
+    def execute(self, data, rule_context: RuleContext):
+        pass
+
+    @property
+    def declared_parameters(self):
+        return {}
+
+    def on_failure(self):
+        self.info('On failured called.')

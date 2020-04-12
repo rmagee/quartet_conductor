@@ -17,7 +17,7 @@ from enum import Enum
 
 from quartet_capture import models
 from quartet_capture.rules import RuleContext, Step
-from quartet_conductor.videojet.steps import CONTEXT_FIELDS
+from quartet_conductor.videojet.steps import ContextFields
 from quartet_conductor.microscan.utils import convert_command_value
 
 
@@ -50,7 +50,7 @@ class MatchStringCommandStep(Step):
         self.match_string_keys = match_string_keys.split(',')
 
     def execute(self, data, rule_context: RuleContext):
-        job_fields = rule_context.context.get(CONTEXT_FIELDS.JOB_FIELDS.value)
+        job_fields = rule_context.context.get(ContextFields.JOB_FIELDS.value)
         match_string = ''
         for key in self.match_string_keys:
             match_string = '%s*%s' % (
@@ -72,17 +72,4 @@ class MatchStringCommandStep(Step):
         self.info('On failured called.')
 
 
-class StartSessionStep(Step):
-    """
-    Clears out any existing sessions and starts a new one with the
-    current host/initiator.
-    """
-    def execute(self, data, rule_context: RuleContext):
-        pass
 
-    @property
-    def declared_parameters(self):
-        return {}
-
-    def on_failure(self):
-        self.info('On failured called.')

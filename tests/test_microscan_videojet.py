@@ -13,20 +13,17 @@
 #
 # Copyright 2019 SerialLab Corp.  All rights reserved.
 
-from django.test import TestCase
-from django.conf import settings
-from django.core.management import call_command
-from quartet_capture import rules
-from quartet_capture.models import Task, Rule
-from quartet_capture.tasks import execute_queued_task, execute_rule
-
 from telnetlib import Telnet
 
-from quartet_conductor import session
-from quartet_conductor import models
-from quartet_conductor import steps
+from django.conf import settings
+from django.core.management import call_command
+from django.test import TestCase
 
+from quartet_capture.models import Task, Rule
+from quartet_capture.tasks import execute_rule
+from quartet_conductor import session
 from quartet_conductor.videojet.inputs import InputMonitor
+
 
 class UnitTestIM(InputMonitor):
     def get_session_data(self):

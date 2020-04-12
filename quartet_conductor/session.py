@@ -2,8 +2,10 @@ from enum import Enum
 from logging import getLogger
 from django.db.utils import IntegrityError
 from quartet_conductor.models import Session
+from quartet_capture.rules import RuleContext
 
 logger = getLogger(__name__)
+
 
 class SessionState(Enum):
     RUNNING = 'RUNNING'
@@ -17,12 +19,14 @@ class SessionRunningError(Exception):
     """
     pass
 
+
 class SessionStoppedError(Exception):
     """
     Raised when a new session is created that matches a session that has been
     stopped but not completed.
     """
     pass
+
 
 class SessionExistsError(Exception):
     """
@@ -32,6 +36,7 @@ class SessionExistsError(Exception):
     """
     pass
 
+
 class SessionNotActiveError(Exception):
     """
     Raised when a session that is being started was already started but was
@@ -39,6 +44,7 @@ class SessionNotActiveError(Exception):
     similar).
     """
     pass
+
 
 class SessionStateError(Exception):
     """
@@ -48,7 +54,9 @@ class SessionStateError(Exception):
     pass
 
 
-def start_session(lot: str, expiry: str) -> Session:
+def start_session(lot: str, expiry: str, origin_input: int,
+                  rule_context: RuleContext = None,
+                  ) -> Session:
     """
     Starts a session by passing in the log and expiration date.  Returns
     a Session model instance.  If a session is already running,
@@ -56,73 +64,52 @@ def start_session(lot: str, expiry: str) -> Session:
     stopped gracefully, a SessionExistsError will be raised.
     :param lot: The lot number
     :param expiry: The expiration date
-    :return:
+    :param origin_input: The identifier for the session, should be an IO port
+        number responsible for triggering the session or something similar and
+        unique.
+    :param rule_context: If a session was initiated via a rule containing
+        information necessary for IO map signals to gain access to, add the
+        context to the new session.
+    :return: A new Session model instance.
     """
     cur_session = Session(
         lot=lot,
         expiry=expiry,
         state=SessionState.RUNNING.value
     )
-    if not Session.get_session():
+    if not Session.get_session(origin_input):
         # see if one was started and never stopped
-        if Session.objects.filter(lot=lot, state=SessionState.RUNNING.value).exists():
+        if Session.objects.filter(lot=lot,
+                                  state=SessionState.RUNNING.value).exists():
             raise SessionExistsError('The session with lot %s was started '
                                      'and was never stopped gracefully.')
         # see if one was stopped
-        elif Session.objects.filter(lot=lot, state=SessionState.PAUSED.value).exists():
+        elif Session.objects.filter(lot=lot,
+                                    state=SessionState.PAUSED.value).exists():
             raise SessionStoppedError('The session being started already exits'
                                       'as a stopped session.  To restart, '
                                       'call the session_restart function.')
 
-    if Session._session and Session._session.lot == lot:
+    if Session._sessions.get(origin_input) and Session._sessions.get(origin_input).lot == lot:
         raise SessionRunningError('The session with lot %s is already started.'
                                   % lot)
 
-    Session.create_session(cur_session)
+    Session.create_session(cur_session, origin_input, rule_context)
     return cur_session
 
 
-def get_session() -> Session:
-    cur_session = Session.get_session()
+def get_session(origin_input: int) -> Session:
+    """
+    Returns a session by it's origin input value or identifier.
+    :return: A session model instance.
+    """
+    cur_session = Session.get_session(origin_input)
     if not cur_session:
         raise SessionNotActiveError('There is no currently running session.')
     return cur_session
 
-def pause_session(lot: str):
-    """
-    Stops a session based on lot number.
-    :param lot: Lot number of the session to stop.  If there is no session
-    currently active, will rais a
-    :return: None
-    """
-    cur_session = get_session()
-    cur_session.state = SessionState.PAUSED.value
-    cur_session.save()
-    Session.clear_session()
 
-def restart_session(lot: str):
-    """
-    Will attempt to restart a session identified by lot.  IF the session is
-    not found or is not in a paused state a SessionExistsError will be raised.
-    :param lot: The lot number that identifies the paused session.
-    :return: The restarted session will be returned.
-    """
-    cur_session = Session.get_session()
-    if cur_session:
-        raise SessionExistsError('There is already an active session with '
-                                 'lot %s active. Please stop or finish this '
-                                 'session before starting a new one.' %
-                                 cur_session.lot)
-    try:
-        cur_session = Session.objects.get(lot=lot, state=SessionState.PAUSED.value)
-        cur_session.state = SessionState.RUNNING.value
-        Session.create_session(cur_session)
-        return cur_session
-    except Session.DoesNotExist:
-        raise SessionStateError('The session for lot %s either does not exist '
-                                'or it is not in a PAUSED state.' % lot)
-
-def finish_session(lot: str):
+def finish_session(lot: str) -> None:
     """
     Will mark a session state to FINISHED and remove the session from memory.
     :param lot: The lot of the session to finish.
@@ -132,5 +119,3 @@ def finish_session(lot: str):
     cur_session.state = SessionState.FINISHED.value
     cur_session.save()
     Session.clear_session()
-
-

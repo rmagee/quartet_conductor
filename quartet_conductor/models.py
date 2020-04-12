@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
+import threading
 from django.db import models
 from django.utils.translation import gettext as _
-from quartet_capture.models import Rule
-from datetime import datetime
 
-import threading
+from quartet_capture.models import Rule
+from quartet_capture.rules import RuleContext
+
+from logging import getLogger
+
+logger = getLogger()
+
 
 class Session(models.Model):
-    _session = None
-    _session_lock = threading.Lock()
+    _sessions = {}
+    _session_locks = threading.Lock()
 
     STATE_CHOICES = [
         ('RUNNING', 'Running'),
         ('PAUSED', 'Paused'),
         ('FINISHED', 'Finished')
     ]
-
     lot = models.CharField(
         max_length=20,
         null=False,
@@ -45,21 +49,30 @@ class Session(models.Model):
         choices=STATE_CHOICES,
         default='RUNNING'
     )
-    @classmethod
-    def create_session(cls, session):
-        with cls._session_lock:
-            cls._session = session
-            cls._session.save()
 
     @classmethod
-    def clear_session(cls):
-        with cls._session_lock:
-            cls._session = None
+    def create_session(cls, session, origin_input: int,
+                       rule_context: RuleContext = None,
+                       ):
+        with cls._session_locks:
+            logger.debug(
+                'Adding session with origin input %s and rule_context',
+                origin_input, rule_context.context)
+            session.context = rule_context
+            cls._sessions[origin_input] = session
+            session.save()
 
     @classmethod
-    def get_session(cls):
-        with cls._session_lock:
-            return cls._session
+    def clear_session(cls, origin_input: int):
+        with cls._session_locks:
+            logger.debug('Clearing session with origin input %s', int)
+            cls._sessions.pop(origin_input, None)
+            logger.debug('Session clear.')
+
+    @classmethod
+    def get_session(cls, origin_input: int):
+        with cls._session_locks:
+            return cls._sessions.get(origin_input, None)
 
 
 class InputMap(models.Model):
@@ -83,4 +96,12 @@ class InputMap(models.Model):
         verbose_name=_('Rule Data'),
         help_text=_('Any data to send to the rule when running it. The format'
                     'depends on what the rule expects. ')
+    )
+    models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_('Related Session Input'),
+        help_text=_('If a session is started via another input and that '
+                    'session contains data necessary for this mapping input '
+                    'map\'s rule to run then assign that input here.')
     )
