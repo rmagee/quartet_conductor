@@ -1,0 +1,2 @@
+SCF|SERIAL_NUMBER={{ rule_context.context.serial_number }}|
+PRN

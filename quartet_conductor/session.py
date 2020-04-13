@@ -72,28 +72,15 @@ def start_session(lot: str, expiry: str, origin_input: int,
         context to the new session.
     :return: A new Session model instance.
     """
-    cur_session = Session(
-        lot=lot,
-        expiry=expiry,
-        state=SessionState.RUNNING.value
-    )
-    if not Session.get_session(origin_input):
-        # see if one was started and never stopped
-        if Session.objects.filter(lot=lot,
-                                  state=SessionState.RUNNING.value).exists():
-            raise SessionExistsError('The session with lot %s was started '
-                                     'and was never stopped gracefully.')
-        # see if one was stopped
-        elif Session.objects.filter(lot=lot,
-                                    state=SessionState.PAUSED.value).exists():
-            raise SessionStoppedError('The session being started already exits'
-                                      'as a stopped session.  To restart, '
-                                      'call the session_restart function.')
-
-    if Session._sessions.get(origin_input) and Session._sessions.get(origin_input).lot == lot:
-        raise SessionRunningError('The session with lot %s is already started.'
-                                  % lot)
-
+    try:
+        cur_session = Session.objects.get(lot=lot)
+        cur_session.state = SessionState.RUNNING.value
+    except Session.DoesNotExist:
+        cur_session = Session(
+            lot=lot,
+            expiry=expiry,
+            state=SessionState.RUNNING.value
+        )
     Session.create_session(cur_session, origin_input, rule_context)
     return cur_session
 

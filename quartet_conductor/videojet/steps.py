@@ -13,11 +13,13 @@
 #
 # Copyright 2020 SerialLab Corp.  All rights reserved.
 from telnetlib import Telnet
-
+from serialbox.response import Response
+from serialbox.discovery import get_generator
 from quartet_capture import models
 from quartet_capture.rules import Step
 from quartet_capture.rules import RuleContext
 from quartet_conductor.steps import TelnetStep
+from quartet_conductor import session as session_control
 from enum import Enum
 
 from logging import getLogger
@@ -176,12 +178,108 @@ class StartSessionStep(Step):
     current printer, serial identifier and IO port ready for lookup.
     """
 
+    def __init__(self, db_task: models.Task, **kwargs):
+        super().__init__(db_task, **kwargs)
+        self.lot_field_key = self.get_or_create_parameter(
+            'Lot Field Key',
+            'LOT',
+            self.declared_parameters.get('Lot Field Key')
+        )
+        self.expiry_field_key = self.get_or_create_parameter(
+            'Expiry Field Key',
+            'EXPIRY',
+            self.declared_parameters.get('Expiry Field Key')
+        )
+
+    def get_lot_expiry(self, rule_context: RuleContext):
+        """
+        Uses the step parameters to pull out the lot and expiration
+        :param rule_context: The rule context
+        :return: Lot and Expiry values
+        """
+        job_fields = rule_context.context.get(ContextFields.JOB_FIELDS.value)
+        return job_fields[self.lot_field_key], job_fields[
+            self.expiry_field_key]
+
     def execute(self, data, rule_context: RuleContext):
-        pass
+        lot, expiry = self.get_lot_expiry(rule_context)
+        session_control.start_session(
+            lot, expiry,
+            int(rule_context.context[ContextFields.IO_PORT.value]),
+            rule_context
+        )
 
     @property
     def declared_parameters(self):
-        return {}
+        return {
+            'Lot Field Key': 'The key in the rule context job parameters '
+                             'loaded by the job fields step in which to find '
+                             'the lot. Default is LOT',
+            'Expiry Field Key': 'They key in the rule context job parameters '
+                                'loaded by the job fields step in which to find '
+                                'the expiry. Default is EXPIRY'
+        }
 
     def on_failure(self):
         self.info('On failured called.')
+
+
+class PrintLabelStep(TelnetStep):
+    """
+    Sends a serialnumber from serialbox to the label's serial_number field
+    and issues a print command.
+    """
+
+    def __init__(self, db_task: models.Task, **kwargs):
+        super().__init__(db_task, **kwargs)
+        self.host = self.get_or_create_parameter(
+            'Host', 'printer',
+            'The host name or IP address of the videojet printer.'
+        )
+        self.port = int(self.get_or_create_parameter(
+            'Port', '777',
+            'The text communications port that was enabled on the printer.'
+        ))
+        self.serial_number_field = self.get_or_create_parameter(
+            'Serial Number Field',
+            'SERIAL_NUMBER',
+            self.declared_parameters.get('Serial Number Field')
+        )
+
+    def execute(self, data, rule_context: RuleContext):
+        with Telnet(self.host, self.port) as client:
+            # get the serial identifier from the context
+            serial_identifier = rule_context.get(
+                ContextFields.SERIAL_IDENTIFIER.value)
+            if not serial_identifier:
+                self.error('Could not find a serial identifier in the contex.'
+                           ' This is necessary to print a label.  Please ensure '
+                           'your label has a GTIN field or that your '
+                           'GetSerialIdentifier step is configured to pull '
+                           'the appropriate field from the printer job data.')
+                raise NoJobFieldsError('Could not find the job field to use '
+                                       'for the serial identifier in the '
+                                       'current job fields using key %s' %
+                                       ContextFields.SERIAL_IDENTIFIER.value)
+            # pull a number from serialbox using that identifier
+            generator = get_generator(serial_identifier)
+            response = Response()
+            generator.generate(None, response, serial_identifier)
+            serial_number = response.number_list[0]
+            # create the command
+            command = 'SCF|{1}={0}|\rPRN\r'.format(
+                self.serial_number_field,
+                serial_number
+            ).encode('ascii')
+            # send to the printer and then print
+            client.write(command)
+            self.info('sent %s command to the printer', command)
+
+    @property
+    def declared_parameters(self):
+        ret = super().declared_parameters()
+        ret['Serial Number Field'] = 'The name of the field in the label' \
+                                     ' where ' \
+                                     'the serial number value with be ' \
+                                     'sent to.'
+        return ret

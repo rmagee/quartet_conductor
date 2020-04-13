@@ -97,6 +97,13 @@ class Command(BaseCommand):
             description='The port to connect to. Microscan scanner 2001.',
             step=tcp_step
         )
+        create_session_step = models.Step.objects.create(
+            name='Start Session',
+            description='Creates a session object for input maps to access',
+            step_class='quartet_conductor.videojet.steps.StartSessionStep',
+            rule=rule,
+            order=25
+        )
         Template.objects.create(
             name='Initialize Microscan',
             description='Contains the data to send to the scanner to initialize'

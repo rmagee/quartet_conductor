@@ -12,6 +12,7 @@ from quartet_conductor import session
 from quartet_conductor.videojet.steps import ContextFields
 import time
 
+
 class TestSessions(TestCase):
 
     def setUp(self) -> None:
@@ -28,15 +29,16 @@ class TestSessions(TestCase):
     def test_a_start_session_twice(self):
         rule_context = self.run_rule()
         lot, expiry = self.get_lot_expiry(rule_context)
-        with self.assertRaises(session.SessionRunningError):
-            session.start_session(lot,
-                                  expiry,
-                                  2,
-                                  rule_context)
-            session.start_session(lot,
-                                  expiry,
-                                  2,
-                                  rule_context)
+        session.start_session(lot,
+                              expiry,
+                              2,
+                              rule_context)
+        self.assertEqual(lot, session.get_session(2).lot)
+        session.start_session(lot,
+                              expiry,
+                              2,
+                              rule_context)
+        self.assertEqual(lot, session.get_session(2).lot)
 
     def run_rule(self):
         call_command('create_initialize_microscan_rule', delete=True)
@@ -50,25 +52,9 @@ class TestSessions(TestCase):
         time.sleep(1)
         return execute_rule('', task)
 
-
-    def get_lot_expiry(self, rule_context:RuleContext):
+    def get_lot_expiry(self, rule_context: RuleContext):
         job_fields = rule_context.context.get(ContextFields.JOB_FIELDS.value)
         return job_fields['LOT'], job_fields['EXPIRY']
-
-    def test_start_no_stop(self):
-        rule_context = self.run_rule()
-        lot, expiry = self.get_lot_expiry(rule_context)
-        models.Session.clear_session(2)
-        session.start_session(lot,
-                              expiry,
-                              2,
-                              rule_context)
-        models.Session.clear_session(2)
-        with self.assertRaises(session.SessionExistsError):
-            session.start_session(lot,
-                                  expiry,
-                                  2,
-                                  rule_context)
 
     def test_b_get_session(self):
         for i in range(1, 200):

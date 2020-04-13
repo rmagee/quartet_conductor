@@ -17,7 +17,26 @@ from quartet_capture import rules, models
 from quartet_capture.rules import RuleContext
 from quartet_templates.steps import TemplateStep as TS
 from telnetlib import Telnet
+from quartet_conductor.session import get_session
+from quartet_conductor.models import InputMap
+from enum import Enum
 
+class ContextKeys(Enum):
+    """
+    INPUT_NUMBER
+    ------------
+    Represents and IO block input.  This number will be sent into the rule
+    via the capture interface and will be processed and placed on the
+    RuleContext by the GetInputStep
+    """
+    INPUT_NUMBER = 'INPUT_NUMBER'
+
+class InvalidInputError(Exception):
+    """
+    Raised when a bad input (above or below the avialable number of inputs (16))
+    has been sent into the rule.
+    """
+    pass
 
 class TemplateStep(TS):
 
@@ -25,6 +44,57 @@ class TemplateStep(TS):
         ret = super().execute(data, rule_context)
         self.info('Converting the return text to ASCII')
         return ret.encode('ascii')
+
+class GetSessionStep(rules.Step):
+    """
+    This step assumes that the data passed into the capture
+    rule contains a single digit representing an IO port on a DIO
+    module.  This digit will be placed on the context under the
+    INPUT_NUMBER context key.
+    """
+
+    def execute(self, data, rule_context: RuleContext):
+        self.info('Processing data %s', data)
+        input = int(data)
+        self.check_input(input)
+        input_map = self.get_input_map(input)
+        self.check_input(input_map.related_session_input)
+        session = get_session(input_map.related_session_input)
+        rule_context.context = session.context
+        rule_context.context[ContextKeys.INPUT_NUMBER.value] = input
+        self.info('Session context %s', rule_context)
+        return data
+
+    def check_input(self, input):
+        if input < 1 or input > 16:
+            raise InvalidInputError('%s is not a valid input.  Check your '
+                                    'inbound input and your related input '
+                                    'on your input map to ensure that the '
+                                    'number is between one and 16.' % input)
+
+    @property
+    def declared_parameters(self):
+        return {}
+
+    def on_failure(self):
+        pass
+
+    def get_input_map(self, input: int):
+        try:
+            input_map = InputMap.objects.get(
+                input_number=input
+            )
+            if input_map.related_session_input == None:
+                raise InvalidInputError(
+                    'The Input Map defined for this input (%s), does not '
+                    'have a related session input defined.  Please define '
+                    'the input that is responsible for starting a print '
+                    'session.' % input
+                )
+            return input_map
+        except InputMap.DoesNotExist:
+            raise InvalidInputError('There is no input map defined for input '
+                                    '%s' % input)
 
 
 class TelnetStep(rules.Step):

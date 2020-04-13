@@ -15,6 +15,10 @@ class Session(models.Model):
     _sessions = {}
     _session_locks = threading.Lock()
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.context = {}
+
     STATE_CHOICES = [
         ('RUNNING', 'Running'),
         ('PAUSED', 'Paused'),
@@ -76,13 +80,14 @@ class Session(models.Model):
 
 
 class InputMap(models.Model):
-    models.PositiveSmallIntegerField(
+    input_number = models.PositiveSmallIntegerField(
         blank=False,
         null=False,
         verbose_name=_('Input Number'),
-        help_text=_('The input number to map the rule and input text to.')
+        help_text=_('The input number to map the rule and input text to.'),
+        default=7
     )
-    models.ForeignKey(
+    rule = models.ForeignKey(
         Rule,
         null=False,
         blank=False,
@@ -90,14 +95,14 @@ class InputMap(models.Model):
         help_text=_('The rule to execute when the input is high.'),
         on_delete=models.CASCADE
     )
-    models.TextField(
+    rule_data = models.TextField(
         null=True,
         blank=True,
         verbose_name=_('Rule Data'),
         help_text=_('Any data to send to the rule when running it. The format'
                     'depends on what the rule expects. ')
     )
-    models.PositiveSmallIntegerField(
+    related_session_input = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
         verbose_name=_('Related Session Input'),
