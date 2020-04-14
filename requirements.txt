@@ -1,2 +1,4 @@
 quartet_capture
+django
+djangorestframework
 # Additional requirements go here

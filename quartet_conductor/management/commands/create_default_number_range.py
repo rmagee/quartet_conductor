@@ -13,6 +13,9 @@
 #
 # Copyright 2020 SerialLab Corp.  All rights reserved.
 
+from django.core.management.base import BaseCommand
+from django.utils.translation import gettext as _
+
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -28,12 +31,9 @@
 #
 # Copyright 2020 SerialLab Corp.  All rights reserved.
 # .
-from quartet_capture.models import Rule, Step, StepParameter
+from quartet_capture.models import Rule
 from quartet_conductor.models import InputMap
-from quartet_templates.models import Template
-from django.core.management.base import BaseCommand
-from django.utils.translation import gettext as _
-import os
+from serialbox.models import Pool, SequentialRegion
 
 class Command(BaseCommand):
     help = _('Will create the rule, steps and logic necessary to initialize '
@@ -43,24 +43,25 @@ class Command(BaseCommand):
         parser.add_argument(
             '--delete',
             action='store_true',
-            help='Delete any maps and overwrite.'
+            help='Delete any existing ranges and overwrites.'
         )
 
     def handle(self, *args, **options):
         answer = options['delete']
         try:
-            print_rule = Rule.objects.get(name='VideoJet Print')
-            init_rule = Rule.objects.get(name='Initialize Microscan')
             if answer:
-                InputMap.objects.filter(rule__in=[print_rule, init_rule]).delete()
-            InputMap.objects.create(
-                rule=print_rule,
-                input_number=4,
-                related_session_input=2
+                Pool.objects.filter(machine_name='DEFAULT')
+            pool = Pool.objects.create(
+                readable_name='Default Range',
+                machine_name='DEFAULT',
+                active=True
             )
-            InputMap.objects.create(
-                rule=init_rule,
-                input_number=2
+            sequential_region = SequentialRegion.objects.create(
+                machine_name=pool.machine_name,
+                readable_name=pool.readable_name,
+                start=777000000000,
+                end=999999999999,
+                pool=pool
             )
         except Rule.DoesNotExist:
             print('Make sure you have run the create_initialize_microscan_rule '

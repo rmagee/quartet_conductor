@@ -12,17 +12,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2020 SerialLab Corp.  All rights reserved.
-from telnetlib import Telnet
-from serialbox.response import Response
-from serialbox.discovery import get_generator
-from quartet_capture import models
-from quartet_capture.rules import Step
-from quartet_capture.rules import RuleContext
-from quartet_conductor.steps import TelnetStep
-from quartet_conductor import session as session_control
 from enum import Enum
-
 from logging import getLogger
+from telnetlib import Telnet
+
+from django.conf import settings
+
+from quartet_capture import models
+from quartet_capture.rules import RuleContext
+from quartet_capture.rules import Step
+from quartet_conductor import session as session_control
+from quartet_conductor.steps import TelnetStep
+from serialbox.discovery import get_generator
+from serialbox.models import Pool
+from serialbox.response import Response
+from rest_framework.exceptions import NotFound
 
 logger = getLogger(__name__)
 
@@ -89,7 +93,7 @@ class JobFieldsStep(TelnetStep):
         ))
 
     def execute(self, data, rule_context: RuleContext):
-        with Telnet(self.host, self.port) as client:
+        with Telnet(self.host, self.port, timeout=self.timeout) as client:
             self.info('Getting data from host %s on port %s...',
                       self.host, self.port)
             data = 'GJD\r'.encode('ascii')
@@ -113,7 +117,7 @@ class JobFieldsStep(TelnetStep):
 
     @property
     def declared_parameters(self):
-        parms = super().declared_parameters()
+        parms = super().declared_parameters
         parms['IO Port'] = 'The input port that the printer will respond to ' \
                            'if applicable.'
 
@@ -247,10 +251,18 @@ class PrintLabelStep(TelnetStep):
         )
 
     def execute(self, data, rule_context: RuleContext):
-        with Telnet(self.host, self.port) as client:
+        with Telnet(self.host, self.port, timeout=self.timeout) as client:
             # get the serial identifier from the context
-            serial_identifier = rule_context.get(
-                ContextFields.SERIAL_IDENTIFIER.value)
+            job_fields = rule_context.context.get(ContextFields.JOB_FIELDS.value)
+            if not job_fields:
+                somehow_ = 'There were no job fields in the context ' \
+                           'this typically means the session was ' \
+                           'not started properly or was reset ' \
+                           'somehow.'
+                self.error(somehow_)
+                raise NoJobFieldsError(somehow_)
+            serial_identifier = job_fields.get(
+                self.serial_number_field)
             if not serial_identifier:
                 self.error('Could not find a serial identifier in the contex.'
                            ' This is necessary to print a label.  Please ensure '
@@ -262,10 +274,7 @@ class PrintLabelStep(TelnetStep):
                                        'current job fields using key %s' %
                                        ContextFields.SERIAL_IDENTIFIER.value)
             # pull a number from serialbox using that identifier
-            generator = get_generator(serial_identifier)
-            response = Response()
-            generator.generate(None, response, serial_identifier)
-            serial_number = response.number_list[0]
+            serial_number = self.get_serial_number(serial_identifier)
             # create the command
             command = 'SCF|{1}={0}|\rPRN\r'.format(
                 self.serial_number_field,
@@ -275,9 +284,35 @@ class PrintLabelStep(TelnetStep):
             client.write(command)
             self.info('sent %s command to the printer', command)
 
+    def get_serial_number(self, serial_identifier):
+        """
+        Calls serialbox and uses the serial_identifier as a machine name
+        to retrieve a serial number.  If USE_DEFAULT_RANGE is defined as
+        True in settings (default) then if the pool can not be found, the
+        pool with the machine name DEFAULT will be used.
+        :param serial_identifier: The machine name of the pool to use.
+        :return: A serial number.
+        """
+        class dummy_request:
+            def get_host(self):
+                return 'CONDUCTOR'
+
+        try:
+            generator = get_generator(serial_identifier)
+        except NotFound as e:
+            print(e)
+            if getattr(settings, 'USE_DEFAULT_RANGE', True):
+                serial_identifier = 'DEFAULT'
+                generator = get_generator(serial_identifier)
+            else:
+                raise
+        response = generator.get_response(dummy_request(), 1, serial_identifier)
+        serial_number = response.number_list[0]
+        return serial_number
+
     @property
     def declared_parameters(self):
-        ret = super().declared_parameters()
+        ret = super().declared_parameters
         ret['Serial Number Field'] = 'The name of the field in the label' \
                                      ' where ' \
                                      'the serial number value with be ' \

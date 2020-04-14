@@ -25,14 +25,18 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
+            '-d',
             '--delete',
+            action='store_true',
             help='Delete any existing rule and overwrite it.'
         )
 
     def handle(self, *args, **options):
         answer = options['delete']
-        if answer:
+        if answer == True:
+            print('******************************************')
             rules = models.Rule.objects.filter(name='Initialize Microscan')
+            Template.objects.filter(name='Initialize Microscan').delete()
             print('Deleting %s rules' % rules.count())
             rules.delete()
         rule = models.Rule.objects.create(

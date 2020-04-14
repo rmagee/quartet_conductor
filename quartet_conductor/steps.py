@@ -19,6 +19,7 @@ from quartet_templates.steps import TemplateStep as TS
 from telnetlib import Telnet
 from quartet_conductor.session import get_session
 from quartet_conductor.models import InputMap
+from django.conf import settings
 from enum import Enum
 
 class ContextKeys(Enum):
@@ -60,7 +61,7 @@ class GetSessionStep(rules.Step):
         input_map = self.get_input_map(input)
         self.check_input(input_map.related_session_input)
         session = get_session(input_map.related_session_input)
-        rule_context.context = session.context
+        rule_context.context.update(session.context.context)
         rule_context.context[ContextKeys.INPUT_NUMBER.value] = input
         self.info('Session context %s', rule_context)
         return data
@@ -104,10 +105,11 @@ class TelnetStep(rules.Step):
 
     def __init__(self, db_task: models.Task, **kwargs):
         super().__init__(db_task, **kwargs)
+        self.timeout = getattr(settings, 'TELNET_TIMEOUT', 3)
 
     def execute(self, data, rule_context: RuleContext):
         self.init_params()
-        with Telnet(self.host, self.port) as client:
+        with Telnet(self.host, self.port, timeout=self.timeout) as client:
             self.info('Writing data %s', data)
             client.write(data)  # only output matches
             client.close()

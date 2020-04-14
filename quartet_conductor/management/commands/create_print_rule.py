@@ -48,7 +48,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         answer = options['delete']
         if answer:
-            pass
+            qs = Rule.objects.filter(name='VideoJet Print')
+            print('Deleting %s Rules' % qs.count())
+            qs.delete()
 
         # create the print label rule
         print_rule = Rule.objects.create(
@@ -74,10 +76,4 @@ class Command(BaseCommand):
             order=10,
             rule=print_rule
         )
-        InputMap.objects.create(
-            rule=print_rule,
-            input_number=4,
-            related_session_input=2
-        )
-
 

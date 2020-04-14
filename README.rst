@@ -37,3 +37,18 @@ The default label fields are as follows:
 * SERIAL_NUMBER - The serial number field.
 
 Any other fields are fine but will be ignored.
+
+Settings
+========
+The following django settings are available.
+
+This is the print rule used by the Input Monitor
+DEFAULT_PRINT_RULE="VideoJet Print"
+
+The number of seconds before a telnet connection will timeout.
+TELNET_TIMEOUT=3
+
+Whether or not to roll over to a default serial range if an explicit
+GTIN range is not defined in serialbox.
+
+USE_DEFAULT_RANGE=True
