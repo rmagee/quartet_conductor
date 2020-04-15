@@ -249,11 +249,17 @@ class PrintLabelStep(TelnetStep):
             'SERIAL_NUMBER',
             self.declared_parameters.get('Serial Number Field')
         )
+        self.printer_command = self.get_or_create_parameter(
+            'Printer Command',
+            'JDA|{0}={1}|',
+            self.declared_parameters.get('Printer Command')
+        )
 
     def execute(self, data, rule_context: RuleContext):
         with Telnet(self.host, self.port, timeout=self.timeout) as client:
             # get the serial identifier from the context
-            job_fields = rule_context.context.get(ContextFields.JOB_FIELDS.value)
+            job_fields = rule_context.context.get(
+                ContextFields.JOB_FIELDS.value)
             if not job_fields:
                 somehow_ = 'There were no job fields in the context ' \
                            'this typically means the session was ' \
@@ -261,8 +267,8 @@ class PrintLabelStep(TelnetStep):
                            'somehow.'
                 self.error(somehow_)
                 raise NoJobFieldsError(somehow_)
-            serial_identifier = job_fields.get(
-                self.serial_number_field)
+            serial_identifier = rule_context.context.get(
+                ContextFields.SERIAL_IDENTIFIER.value)
             if not serial_identifier:
                 self.error('Could not find a serial identifier in the contex.'
                            ' This is necessary to print a label.  Please ensure '
@@ -276,12 +282,16 @@ class PrintLabelStep(TelnetStep):
             # pull a number from serialbox using that identifier
             serial_number = self.get_serial_number(serial_identifier)
             # create the command
-            command = 'SCF|{1}={0}|\rPRN\r'.format(
+            command = self.printer_command.format(
                 self.serial_number_field,
                 serial_number
-            ).encode('ascii')
+            ) + '\r'
+            command = command.encode('ascii')
             # send to the printer and then print
             client.write(command)
+            ret = client.read_until('\r'.encode('ascii'))
+            self.info('Data retrieved: %s', ret)
+            client.close()
             self.info('sent %s command to the printer', command)
 
     def get_serial_number(self, serial_identifier):
@@ -293,6 +303,7 @@ class PrintLabelStep(TelnetStep):
         :param serial_identifier: The machine name of the pool to use.
         :return: A serial number.
         """
+
         class dummy_request:
             def get_host(self):
                 return 'CONDUCTOR'
@@ -306,7 +317,8 @@ class PrintLabelStep(TelnetStep):
                 generator = get_generator(serial_identifier)
             else:
                 raise
-        response = generator.get_response(dummy_request(), 1, serial_identifier)
+        response = generator.get_response(dummy_request(), 1,
+                                          serial_identifier)
         serial_number = response.number_list[0]
         return serial_number
 
@@ -317,4 +329,8 @@ class PrintLabelStep(TelnetStep):
                                      ' where ' \
                                      'the serial number value with be ' \
                                      'sent to.'
+        ret['Printer Command'] = 'The text command to send to the printer to ' \
+                                 'transmit the serial number.  Default is ' \
+                                 'JDA|{1}={0}|\r - make sure to include a ' \
+                                 'carriage return at the end of each command.'
         return ret
