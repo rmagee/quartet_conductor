@@ -113,10 +113,6 @@ class TaskThread(Thread):
             raise
 
 
-# class RuleLoader:
-#
-#     def load_rules(self):
-#         dummy_task = Task
-#         maps = InputMap.objects.select_related('rule').all()
-#         for map in maps:
-#             CRule(Rule, )
+if __name__ == '__main__':
+    input = ThreadedInputMonitor(sleep_interval=.15)
+    input.run()
