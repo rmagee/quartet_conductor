@@ -101,9 +101,9 @@ class JobFieldsStep(TelnetStep):
             ret = client.read_until('\r'.encode('ascii'))
             self.info('Data retrieved: %s', ret)
             print(ret)
-            if 'ACK' not in ret:
+            if 'JDL' not in ret.decode('utf-8') :
                 raise PrinterError('The printer did not return the expected '
-                                   'ACK reply.  Please check the printer.')
+                                   'JDL reply.  Please check the printer.')
             client.close()
             ret = ret.decode('ascii').split('|')
             dict = {}
@@ -299,6 +299,9 @@ class PrintLabelStep(TelnetStep):
             client.write(command)
             ret = client.read_until('\r'.encode('ascii'))
             self.info('Data retrieved: %s', ret)
+            if 'ACK' not in ret.decode('utf-8') :
+                raise PrinterError('The printer did not return the expected '
+                                   'ACK reply.  Please check the printer.')
             client.close()
             self.info('sent %s command to the printer', command)
 

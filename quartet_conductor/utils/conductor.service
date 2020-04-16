@@ -1,0 +1,13 @@
+[Unit]
+Description=QU4RTET Conductor
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+ExecStart=/home/pi/.virtualenvs/qu4rtet/bin/python /home/pi/quartet_conductor/quartet_conductor/microscan/inputs.py
+
+[Install]
+WantedBy=multi-user.target

@@ -10,10 +10,11 @@ from logging import getLogger
 
 logger = getLogger()
 
+_session_locks = threading.Lock()
+_sessions = {}
+
 
 class Session(models.Model):
-    _sessions = {}
-    _session_locks = threading.Lock()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -58,25 +59,32 @@ class Session(models.Model):
     def create_session(cls, session, origin_input: int,
                        rule_context: RuleContext = None,
                        ):
-        with cls._session_locks:
+        with _session_locks:
             logger.debug(
-                'Adding session with origin input %s and rule_context',
+                'Adding session with origin input %s and rule_context %s',
                 origin_input, rule_context.context)
             session.context = rule_context
-            cls._sessions[origin_input] = session
+            _sessions[origin_input] = session
             session.save()
 
     @classmethod
     def clear_session(cls, origin_input: int):
-        with cls._session_locks:
+        with _session_locks:
             logger.debug('Clearing session with origin input %s', int)
-            cls._sessions.pop(origin_input, None)
+            _sessions.pop(origin_input, None)
             logger.debug('Session clear.')
 
     @classmethod
     def get_session(cls, origin_input: int):
-        with cls._session_locks:
-            return cls._sessions.get(origin_input, None)
+        try:
+            logger.debug('Acquiring lock...there are currently %s sessions',
+                         len(_sessions))
+            _session_locks.acquire(blocking=True, timeout=1)
+            ret = _sessions.get(origin_input, None)
+            logger.debug('Returning session %s', ret)
+            return ret
+        finally:
+            _session_locks.release()
 
 
 class InputMap(models.Model):

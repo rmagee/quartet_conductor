@@ -71,18 +71,12 @@ class ThreadedInputMonitor(IM):
         self.execute_task(input_map, input_number)
 
     def execute_task(self, input_map, input_number):
-        # create_and_queue_task(str(input_number),
-        #                       rule_name=input_map.rule.name,
-        #                       run_immediately=False,
-        #                       initial_status='RUNNING',
-        #                       rule=input_map.rule
-        #                       )
         print('Starting the thread...')
         Thread(
             target=create_and_queue_task,
             args=(str(input_number)),
             kwargs={'rule_name': input_map.rule.name,
-                    'run_immediately': False,
+                    'run_immediately': True,
                     'initial_status': 'RUNNING',
                     'rule': input_map.rule}
         ).run()
