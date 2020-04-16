@@ -13,19 +13,3 @@
 #
 # Copyright 2020 SerialLab Corp.  All rights reserved.
 
-from django.contrib import admin
-from quartet_conductor import models
-
-class SessionAdmin(admin.ModelAdmin):
-    model = models.Session
-    search_fields = ['lot', 'expiry']
-
-class InputMapAdmin(admin.ModelAdmin):
-    model = models.InputMap
-    search_fields = ['rule__name', 'input_number']
-    list_display = ['rule', 'input_number', 'related_session_input']
-
-
-def register_to_site(admin_site: admin.AdminSite):
-    admin_site.register(models.Session, SessionAdmin)
-    admin_site.register(models.InputMap, InputMapAdmin)

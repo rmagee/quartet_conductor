@@ -12,20 +12,24 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2020 SerialLab Corp.  All rights reserved.
+import sys
+import os
+
+sys.path.append('/srv/qu4rtet')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.production')
+from django import setup
+
+setup()
+from logging import getLogger
+import os
+from abc import abstractmethod
+from threading import Thread
 from typing import Optional, Callable, Any, Iterable, Mapping
 
-from revpy_dio.inputs import InputMonitor as IM
-from quartet_conductor.session import start_session
-from django.conf import settings
-from quartet_conductor.microscan.utils import convert_command_value as ccv
-from abc import abstractmethod
-from quartet_capture.tasks import create_and_queue_task
 from quartet_capture.models import Rule
-from quartet_capture.rules import Rule as CRule
+from quartet_capture.tasks import create_and_queue_task
 from quartet_conductor.models import InputMap
-from logging import getLogger
-from telnetlib import Telnet
-from threading import Thread
+from revpy_dio.inputs import InputMonitor as IM
 
 logger = getLogger()
 
@@ -36,11 +40,9 @@ class ThreadedInputMonitor(IM):
     and input 2 to send a label.
     """
 
-    def __init__(self, host: str, port: int, sleep_interval: float = .10):
+    def __init__(self, sleep_interval: float = .10):
         super().__init__(sleep_interval)
         self.session = None
-        self.host = host
-        self.port = port
         self.input_maps = {}
 
     def handle_input(self, input_number: int):
@@ -51,25 +53,39 @@ class ThreadedInputMonitor(IM):
         :return: None
         """
         # get the IO map if it is not already loaded and execute it's rule
+        print('Handling input %s' % input_number)
         input_map = self.input_maps.get(input_number)
+        print('input map %s' % input_map)
         if not input_map:
             try:
+                print('looking up the input map')
                 input_map = InputMap.objects.select_related('rule').get(
                     input_number=input_number
                 )
                 self.input_maps[input_number] = input_map
-                self.execute_task(input_map, input_number)
+                print('set the input map now executing the task.')
             except InputMap.DoesNotExist:
-                logger.exception('There was no input map for input %s',
-                                 input_number)
+                s = 'There was no input map for input %s' % input_number
+                print(s)
+                logger.exception(s)
+        self.execute_task(input_map, input_number)
 
     def execute_task(self, input_map, input_number):
-        create_and_queue_task(str(input_number),
-                              rule_name=input_map.rule.name,
-                              run_immediately=False,
-                              initial_status='RUNNING',
-                              rule=input_map.rule
-                              )
+        # create_and_queue_task(str(input_number),
+        #                       rule_name=input_map.rule.name,
+        #                       run_immediately=False,
+        #                       initial_status='RUNNING',
+        #                       rule=input_map.rule
+        #                       )
+        print('Starting the thread...')
+        Thread(
+            target=create_and_queue_task,
+            args=(str(input_number)),
+            kwargs={'rule_name': input_map.rule.name,
+                    'run_immediately': False,
+                    'initial_status': 'RUNNING',
+                    'rule': input_map.rule}
+        ).run()
 
     @abstractmethod
     def get_session_data(self):
@@ -84,6 +100,7 @@ class TaskThread(Thread):
     """
     Will run a task outside of celery to improve performance.
     """
+
     def __init__(self, group: None = ...,
                  target: Optional[Callable[..., Any]] = ...,
                  name: Optional[str] = ..., args: Iterable[Any] = ...,
@@ -102,6 +119,7 @@ class TaskThread(Thread):
 
     def run(self) -> None:
         try:
+            print('Executing task')
             create_and_queue_task(str(self.input),
                                   rule_name=self.input_map.rule.name,
                                   run_immediately=True,
@@ -114,5 +132,6 @@ class TaskThread(Thread):
 
 
 if __name__ == '__main__':
-    input = ThreadedInputMonitor(sleep_interval=.15)
+    input = ThreadedInputMonitor(sleep_interval=.25)
     input.run()
+    # test sync

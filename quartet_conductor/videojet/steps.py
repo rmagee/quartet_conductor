@@ -100,6 +100,10 @@ class JobFieldsStep(TelnetStep):
             client.write(data)  # only output matches
             ret = client.read_until('\r'.encode('ascii'))
             self.info('Data retrieved: %s', ret)
+            print(ret)
+            if 'ACK' not in ret:
+                raise PrinterError('The printer did not return the expected '
+                                   'ACK reply.  Please check the printer.')
             client.close()
             ret = ret.decode('ascii').split('|')
             dict = {}
@@ -117,17 +121,19 @@ class JobFieldsStep(TelnetStep):
 
     @property
     def declared_parameters(self):
-        parms = super().declared_parameters
-        parms['IO Port'] = 'The input port that the printer will respond to ' \
+        params = super().declared_parameters
+        params['IO Port'] = 'The input port that the printer will respond to ' \
                            'if applicable.'
-
+        return params
 
 class NoJobFieldsError(Exception):
     """
     Raised if no job fields are found in the context.
     """
-    pass
+    blink = 2
 
+class PrinterError(Exception):
+    blink = 3
 
 class GetSerialIdentifierStep(Step):
     """
@@ -231,7 +237,8 @@ class StartSessionStep(Step):
 class PrintLabelStep(TelnetStep):
     """
     Sends a serialnumber from serialbox to the label's serial_number field
-    and issues a print command.
+    and issues a print command.  The carriage return is appended to the
+    end and any ` (backticks) are converted to carriage returns.
     """
 
     def __init__(self, db_task: models.Task, **kwargs):
@@ -254,6 +261,7 @@ class PrintLabelStep(TelnetStep):
             'JDA|{0}={1}|',
             self.declared_parameters.get('Printer Command')
         )
+        self.printer_command.replace('`','\r')
 
     def execute(self, data, rule_context: RuleContext):
         with Telnet(self.host, self.port, timeout=self.timeout) as client:
