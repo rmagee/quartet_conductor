@@ -112,6 +112,11 @@ class TelnetStep(rules.Step):
     def __init__(self, db_task: models.Task, **kwargs):
         super().__init__(db_task, **kwargs)
         self.timeout = getattr(settings, 'TELNET_TIMEOUT', 3)
+        self.error_output = int(self.get_or_create_parameter(
+            'Error Output Port', '8',
+            'The output to raise high when the printer can not be reached, '
+                                 'default is 8.'
+        ))
 
     def execute(self, data, rule_context: RuleContext):
         self.init_params()
@@ -139,7 +144,8 @@ class TelnetStep(rules.Step):
         }
 
     def on_failure(self):
-        pass
+        if conductor_settings.OUTPUT_CONTROL:
+            outputs.set_output(self.error_output, True)
 
 
 class SetOutputsStep(rules.Step):

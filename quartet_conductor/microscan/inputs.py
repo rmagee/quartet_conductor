@@ -72,7 +72,9 @@ class ThreadedInputMonitor(IM):
                 s = 'There was no input map for input %s' % input_number
                 print(s)
                 logger.exception(s)
+        print('Executing task...')
         self.execute_task(input_map, input_number)
+        print('Task executed...')
 
     def execute_task(self, input_map, input_number):
         if not input_map:
@@ -145,7 +147,7 @@ if __name__ == '__main__':
     if not args.stop:
         if args.readyOutput != '-1':
             set_output(int(args.readyOutput))
-        input = ThreadedInputMonitor(sleep_interval=.25)
+        input = ThreadedInputMonitor(sleep_interval=.10)
         input.run()
     else:
         set_output(int(args.readyOutput), on=False)

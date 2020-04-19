@@ -93,7 +93,8 @@ class InputMap(models.Model):
         null=False,
         verbose_name=_('Input Number'),
         help_text=_('The input number to map the rule and input text to.'),
-        default=7
+        default=7,
+        unique=True
     )
     rule = models.ForeignKey(
         Rule,

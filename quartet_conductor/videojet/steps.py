@@ -101,11 +101,6 @@ class JobFieldsStep(TelnetStep):
         ))
 
     def execute(self, data, rule_context: RuleContext):
-        try:
-            session_control.get_session(int(data))
-            time.sleep(.75)
-        except SessionNotActiveError:
-            pass
         with Telnet(self.host, self.port, timeout=self.timeout) as client:
             self.info('Getting data from host %s on port %s...',
                       self.host, self.port)
