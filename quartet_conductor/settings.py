@@ -16,3 +16,4 @@
 from django.conf import settings
 
 DEFAULT_PAGESIZE = getattr(settings, 'DEFAULT_PAGESIZE', 25)
+OUTPUT_CONTROL=getattr(settings, 'OUTPUT_CONTROL', True)

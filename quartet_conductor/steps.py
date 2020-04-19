@@ -19,6 +19,7 @@ from quartet_templates.steps import TemplateStep as TS
 from telnetlib import Telnet
 from revpy_dio import outputs
 from quartet_conductor.session import get_session
+from quartet_conductor import settings as conductor_settings
 from quartet_conductor.models import InputMap
 from django.conf import settings
 from enum import Enum
@@ -149,14 +150,16 @@ class SetOutputsStep(rules.Step):
     """
 
     def execute(self, data, rule_context: RuleContext):
-        on = self.get_or_create_parameter('On', True,
+        on = self.get_or_create_parameter('On', 'True',
                                           self.declared_parameters.get(
-                                              'Outpul List'))
+                                              'On'))
+        on = on in ['True','true']
         output_list = self.get_parameter('Output List', '',
                                          raise_exception=True)
         list = output_list.split(',')
-        self.info('Setting the outputs %s high.', output_list)
-        list = [outputs.set_output(int(l.trim())) for l in list]
+        self.info('Setting the outputs %s to %s.', output_list, on)
+        if conductor_settings.OUTPUT_CONTROL:
+            [outputs.set_output(int(l.strip()), on=on) for l in list]
 
     @property
     def declared_parameters(self):
@@ -165,3 +168,9 @@ class SetOutputsStep(rules.Step):
                   'True for On.  To turn outputs off set On to False.',
             'Output List': 'A comma delimited list of output number to set.'
         }
+
+    def on_failure(self):
+        pass
+
+
+

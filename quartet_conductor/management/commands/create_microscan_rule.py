@@ -13,11 +13,12 @@
 #
 # Copyright 2020 SerialLab Corp.  All rights reserved.
 # .
-from quartet_capture import models
-from quartet_templates.models import Template
+import os
 from django.core.management.base import BaseCommand
 from django.utils.translation import gettext as _
-import os
+
+from quartet_capture import models
+from quartet_templates.models import Template
 
 
 class Command(BaseCommand):
@@ -33,16 +34,32 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             '-o',
-            '--clear_outputs',
+            '--clearOutputs',
             action='store',
             help='A comma delimited list of numbers to clear when the rule '
                  'is executed.',
             default='6,8'
         )
+        parser.add_argument(
+            '-s',
+            '--scannerHost',
+            type=str,
+            action='store',
+            help='The IP or hostname of the scanner.',
+            required=True
+        )
+        parser.add_argument(
+            '-p',
+            '--printerHost',
+            type=str,
+            action='store',
+            help='The IP or hostname of the printer.',
+            required=True
+        )
 
     def handle(self, *args, **options):
         answer = options['delete']
-        cleared_outputs = options['clear_outputs']
+        cleared_outputs = options['clearOutputs']
         if answer == True:
             print('******************************************')
             rules = models.Rule.objects.filter(name='Initialize Microscan')
@@ -61,6 +78,18 @@ class Command(BaseCommand):
             order=1,
             rule=rule
         )
+        printer_host_step_param = models.StepParameter.objects.create(
+            name='Host',
+            description='The IP or host name of the printer.',
+            value=options['printerHost'],
+            step=printer_query_step
+        )
+        models.StepParameter.objects.create(
+            name='Port',
+            value='777',
+            description='The port to connect to for videojet text communications.',
+            step=printer_query_step
+        )
         # place the serial identifier on the context
         serial_id_step = models.Step.objects.create(
             name='Get Serial Identifier',
@@ -72,7 +101,7 @@ class Command(BaseCommand):
         )
         # formulate the match string command for the scanner
         command_step = models.Step.objects.create(
-            name='Create match string command.',
+            name='Create Match String',
             description='Creates the match string command for the reader.',
             step_class='quartet_conductor.microscan.steps.MatchStringCommandStep',
             order=10,
@@ -101,7 +130,7 @@ class Command(BaseCommand):
         )
         models.StepParameter.objects.create(
             name='Host',
-            value='scanner',
+            value=options['scannerHost'],
             description='The host to connect to. Microscan scanner.',
             step=tcp_step
         )
@@ -121,7 +150,7 @@ class Command(BaseCommand):
         clear_outputs_step = models.Step.objects.create(
             name='Clear Outputs',
             description='Clears out the outputs in the step parameter.',
-            step_class='quartet_conductor.steps.SetOuputsStep',
+            step_class='quartet_conductor.steps.SetOutputsStep',
             rule=rule,
             order=30
         )

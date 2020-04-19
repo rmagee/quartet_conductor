@@ -16,18 +16,21 @@ from enum import Enum
 from logging import getLogger
 from telnetlib import Telnet
 
+from quartet_conductor.session import SessionNotActiveError
+from revpy_dio.outputs import set_output
 from django.conf import settings
 
 from quartet_capture import models
 from quartet_capture.rules import RuleContext
 from quartet_capture.rules import Step
 from quartet_conductor import session as session_control
+from quartet_conductor import settings as conductor_settings
 from quartet_conductor.steps import TelnetStep
 from serialbox.discovery import get_generator
 from serialbox.models import Pool
 from serialbox.response import Response
 from rest_framework.exceptions import NotFound
-
+import time
 logger = getLogger(__name__)
 
 
@@ -91,20 +94,30 @@ class JobFieldsStep(TelnetStep):
             'IO Port', '2',
             'The input port that the printer will respond to if applicable.'
         ))
+        self.error_output = int(self.get_or_create_parameter(
+            'Error Output Port', '6',
+            'The output to raise high when the printer can not be reached, '
+                                 'default is 6.'
+        ))
 
     def execute(self, data, rule_context: RuleContext):
+        try:
+            session_control.get_session(int(data))
+            time.sleep(.75)
+        except SessionNotActiveError:
+            pass
         with Telnet(self.host, self.port, timeout=self.timeout) as client:
             self.info('Getting data from host %s on port %s...',
                       self.host, self.port)
             data = 'GJD\r'.encode('ascii')
             client.write(data)  # only output matches
             ret = client.read_until('\r'.encode('ascii'))
+            client.close()
             self.info('Data retrieved: %s', ret)
             print(ret)
             if 'JDL' not in ret.decode('utf-8') :
                 raise PrinterError('The printer did not return the expected '
                                    'JDL reply.  Please check the printer.')
-            client.close()
             ret = ret.decode('ascii').split('|')
             dict = {}
             for item in ret:
@@ -125,6 +138,13 @@ class JobFieldsStep(TelnetStep):
         params['IO Port'] = 'The input port that the printer will respond to ' \
                            'if applicable.'
         return params
+
+    def on_failure(self):
+        self.error('There was a problem...setting the error output of % s high '
+                   'and exiting.', self.error_output)
+        if conductor_settings.OUTPUT_CONTROL:
+            set_output(self.error_output, on=True)
+
 
 class NoJobFieldsError(Exception):
     """

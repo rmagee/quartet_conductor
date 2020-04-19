@@ -12,8 +12,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Copyright 2020 SerialLab Corp.  All rights reserved.
-import sys
 import os
+import sys
 
 sys.path.append('/srv/qu4rtet')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.production')
@@ -21,7 +21,6 @@ from django import setup
 
 setup()
 from logging import getLogger
-import os
 from abc import abstractmethod
 from threading import Thread
 from typing import Optional, Callable, Any, Iterable, Mapping
@@ -33,6 +32,10 @@ from revpy_dio.inputs import InputMonitor as IM
 from revpy_dio.outputs import set_output
 
 logger = getLogger()
+
+
+class NoInputMapError(Exception):
+    pass
 
 
 class ThreadedInputMonitor(IM):
@@ -72,15 +75,21 @@ class ThreadedInputMonitor(IM):
         self.execute_task(input_map, input_number)
 
     def execute_task(self, input_map, input_number):
-        print('Starting the thread...')
-        Thread(
-            target=create_and_queue_task,
-            args=(str(input_number)),
-            kwargs={'rule_name': input_map.rule.name,
-                    'run_immediately': True,
-                    'initial_status': 'RUNNING',
-                    'rule': input_map.rule}
-        ).run()
+        if not input_map:
+            raise NoInputMapError(
+                'There is no input map defined for input %s, therefor no '
+                'rule can be executed when this input is triggered.' % input_number
+            )
+        else:
+            print('Starting the thread...')
+            Thread(
+                target=create_and_queue_task,
+                args=(str(input_number)),
+                kwargs={'rule_name': input_map.rule.name,
+                        'run_immediately': True,
+                        'initial_status': 'RUNNING',
+                        'rule': input_map.rule}
+            ).run()
 
     @abstractmethod
     def get_session_data(self):
@@ -128,6 +137,7 @@ class TaskThread(Thread):
 
 if __name__ == '__main__':
     import argparse
+
     parser = argparse.ArgumentParser(description='Start the input monitor.')
     parser.add_argument('-r', '--readyOutput', required=False, default='-1')
     parser.add_argument('-s', '--stop', required=False, action='store_true')
