@@ -1,8 +1,11 @@
 from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpRequest
+from django.views import generic
 
-from quartet_conductor.forms import SessionForm
+from quartet_conductor.forms import SessionForm, InputMapForm
 from quartet_conductor import session
+from quartet_conductor import models
+from quartet_conductor import settings as conductor_settings
 
 from logging import getLogger
 
@@ -34,3 +37,19 @@ def session_info(request: HttpRequest):
             form = SessionForm(instance=current_session)
             return render(request, "session_info.html",
                           {'session': current_session, 'form': form})
+
+
+def input_map_detail(request: HttpRequest, id: int=None):
+    if request.method == 'GET':
+        input_map = models.InputMap.objects.get(id=id)
+        form = InputMapForm(instance=input_map)
+        form.update_field_styles()
+        return render(request, "input_map.html",
+                      {'form': form, 'input_map': input_map}
+                      )
+
+
+class InputMapView(generic.ListView):
+    model = models.InputMap
+    template_name = 'input_maps.html'
+    paginate_by = conductor_settings.DEFAULT_PAGESIZE

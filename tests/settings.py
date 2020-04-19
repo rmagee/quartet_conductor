@@ -36,11 +36,13 @@ if django.VERSION >= (1, 10):
 else:
     MIDDLEWARE_CLASSES = ()
 
-TELNET_HOST='telnetServer'
-TELNET_PORT=23
+TELNET_HOST = 'telnetServer'
+TELNET_PORT = 23
 
 try:
     from .local_settings import *
+
     print('LOCAL SETTINGS FOUND')
 except ImportError:
     print('No local settings detected.')
+

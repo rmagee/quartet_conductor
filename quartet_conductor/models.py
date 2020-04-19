@@ -118,3 +118,7 @@ class InputMap(models.Model):
                     'session contains data necessary for this mapping input '
                     'map\'s rule to run then assign that input here.')
     )
+
+    class Meta:
+        verbose_name = _('Input Map')
+        ordering = ['input_number']

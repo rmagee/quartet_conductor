@@ -17,10 +17,12 @@ from quartet_capture import rules, models
 from quartet_capture.rules import RuleContext
 from quartet_templates.steps import TemplateStep as TS
 from telnetlib import Telnet
+from revpy_dio import outputs
 from quartet_conductor.session import get_session
 from quartet_conductor.models import InputMap
 from django.conf import settings
 from enum import Enum
+
 
 class ContextKeys(Enum):
     """
@@ -32,6 +34,7 @@ class ContextKeys(Enum):
     """
     INPUT_NUMBER = 'INPUT_NUMBER'
 
+
 class InvalidInputError(Exception):
     """
     Raised when a bad input (above or below the avialable number of inputs (16))
@@ -39,12 +42,14 @@ class InvalidInputError(Exception):
     """
     pass
 
+
 class TemplateStep(TS):
 
     def execute(self, data, rule_context: RuleContext):
         ret = super().execute(data, rule_context)
         self.info('Converting the return text to ASCII')
         return ret.encode('ascii')
+
 
 class GetSessionStep(rules.Step):
     """
@@ -136,4 +141,27 @@ class TelnetStep(rules.Step):
         pass
 
 
+class SetOutputsStep(rules.Step):
+    """
+    Turns outputs on based on a comma delimited list of outputs.  To turn
+    outputs on then off, consider using a delay step from the capture
+    module.
+    """
 
+    def execute(self, data, rule_context: RuleContext):
+        on = self.get_or_create_parameter('On', True,
+                                          self.declared_parameters.get(
+                                              'Outpul List'))
+        output_list = self.get_parameter('Output List', '',
+                                         raise_exception=True)
+        list = output_list.split(',')
+        self.info('Setting the outputs %s high.', output_list)
+        list = [outputs.set_output(int(l.trim())) for l in list]
+
+    @property
+    def declared_parameters(self):
+        return {
+            'On': 'Whether or not to turn the outputs on or off- default is '
+                  'True for On.  To turn outputs off set On to False.',
+            'Output List': 'A comma delimited list of output number to set.'
+        }

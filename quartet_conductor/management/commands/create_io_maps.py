@@ -39,15 +39,32 @@ class Command(BaseCommand):
     help = _('Will create the rule, steps and logic necessary to initialize '
              'a microscan reader.')
 
+
     def add_arguments(self, parser):
         parser.add_argument(
             '--delete',
             action='store_true',
             help='Delete any maps and overwrite.'
         )
+        parser.add_argument(
+            '-i',
+            '--print_input',
+            action='store',
+            help='The input number for this rule to listen on.',
+            default='4'
+        )
+        parser.add_argument(
+            '-r',
+            '--start_input',
+            action='store',
+            help='The input number for this rule to listen on.',
+            default='2'
+        )
 
     def handle(self, *args, **options):
         answer = options['delete']
+        print_input = int(options['print_input'])
+        start_input = int(options['start_input'])
         try:
             print_rule = Rule.objects.get(name='VideoJet Print')
             init_rule = Rule.objects.get(name='Initialize Microscan')
@@ -55,12 +72,12 @@ class Command(BaseCommand):
                 InputMap.objects.filter(rule__in=[print_rule, init_rule]).delete()
             InputMap.objects.create(
                 rule=print_rule,
-                input_number=4,
-                related_session_input=2
+                input_number=print_input,
+                related_session_input=start_input
             )
             InputMap.objects.create(
                 rule=init_rule,
-                input_number=2
+                input_number=start_input
             )
         except Rule.DoesNotExist:
             print('Make sure you have run the create_initialize_microscan_rule '

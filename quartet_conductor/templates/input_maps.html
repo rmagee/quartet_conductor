@@ -1,0 +1,23 @@
+{% extends "material_index.html" %}
+
+{% block content %}
+  <table class="uk-table uk-table-divider uk-table-striped">
+  <caption>Input Maps</caption>
+    <thead>
+    <tr>
+      <td>Input Number</td>
+      <td>Rule</td>
+      <td>Related Session Input</td>
+    </tr>
+    </thead>
+    {% for input_map in object_list %}
+    <tr>
+      <td>{{ input_map.input_number }}</td>
+      <td>{{ input_map.rule }}</td>
+      <td>{{ input_map.related_session_input }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  {% include "list_pagination.html" %}
+{% endblock %}

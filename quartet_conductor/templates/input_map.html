@@ -1,0 +1,14 @@
+{% extends "material_index.html" %}
+{% block content %}
+
+<form action="/input_map/" method="post">
+  {% csrf_token %}
+  <legend class="uk-legend">Input Map {{ form.input_number.value }}</legend>
+  <table>
+    {{ form.as_table }}
+  </table>
+  <br/>
+  <input type="submit" value="Save" class="uk-button uk-button-default">
+</form>
+
+{% endblock %}

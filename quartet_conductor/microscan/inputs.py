@@ -30,6 +30,7 @@ from quartet_capture.models import Rule
 from quartet_capture.tasks import create_and_queue_task
 from quartet_conductor.models import InputMap
 from revpy_dio.inputs import InputMonitor as IM
+from revpy_dio.outputs import set_output
 
 logger = getLogger()
 
@@ -126,6 +127,16 @@ class TaskThread(Thread):
 
 
 if __name__ == '__main__':
-    input = ThreadedInputMonitor(sleep_interval=.25)
-    input.run()
+    import argparse
+    parser = argparse.ArgumentParser(description='Start the input monitor.')
+    parser.add_argument('-r', '--readyOutput', required=False, default='-1')
+    parser.add_argument('-s', '--stop', required=False, action='store_true')
+    args = parser.parse_args()
+    if not args.stop:
+        if args.readyOutput != '-1':
+            set_output(int(args.readyOutput))
+        input = ThreadedInputMonitor(sleep_interval=.25)
+        input.run()
+    else:
+        set_output(int(args.readyOutput), on=False)
     # test sync

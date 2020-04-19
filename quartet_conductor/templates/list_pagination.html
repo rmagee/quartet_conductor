@@ -1,0 +1,17 @@
+<div class="">
+  <ul class="uk-pagination uk-flex-center">
+    {% for i in page_obj.paginator.page_range %}
+      <li><a href=""></a></li>
+      {% if i != page_obj.number %}
+        <li class="uk-active"><span><a href="?page={{ i }}">{{ i }}</a></span>
+        </li>
+      {% else %}
+        <li class="uk-disabled"><span>{{ i }}</span></li>
+      {% endif %}
+    {% endfor %}
+  </ul>
+{#<ul class="uk-pagination">#}
+{#    <li><a href="?page={{ page_obj.previous_page_number }}"><span class="uk-margin-small-right" uk-pagination-previous></span> Previous</a></li>#}
+{#    <li class="uk-margin-auto-left"><a href="?page={{ page_obs.next_page_number }}">Next <span class="uk-margin-small-left" uk-pagination-next></span></a></li>#}
+{#</ul>#}
+</div>

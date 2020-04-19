@@ -19,6 +19,7 @@ from django.core.management.base import BaseCommand
 from django.utils.translation import gettext as _
 import os
 
+
 class Command(BaseCommand):
     help = _('Will create the rule, steps and logic necessary to initialize '
              'a microscan reader.')
@@ -30,9 +31,18 @@ class Command(BaseCommand):
             action='store_true',
             help='Delete any existing rule and overwrite it.'
         )
+        parser.add_argument(
+            '-o',
+            '--clear_outputs',
+            action='store',
+            help='A comma delimited list of numbers to clear when the rule '
+                 'is executed.',
+            default='6,8'
+        )
 
     def handle(self, *args, **options):
         answer = options['delete']
+        cleared_outputs = options['clear_outputs']
         if answer == True:
             print('******************************************')
             rules = models.Rule.objects.filter(name='Initialize Microscan')
@@ -83,10 +93,10 @@ class Command(BaseCommand):
         )
         # send the data to the scanner
         tcp_step = models.Step.objects.create(
-            name = 'Telnet Data',
+            name='Telnet Data',
             description='Uses telnet session to send data to a TCP endpoint',
             step_class='quartet_conductor.steps.TelnetStep',
-            rule = rule,
+            rule=rule,
             order=20
         )
         models.StepParameter.objects.create(
@@ -108,6 +118,26 @@ class Command(BaseCommand):
             rule=rule,
             order=25
         )
+        clear_outputs_step = models.Step.objects.create(
+            name='Clear Outputs',
+            description='Clears out the outputs in the step parameter.',
+            step_class='quartet_conductor.steps.SetOuputsStep',
+            rule=rule,
+            order=30
+        )
+        outputs = models.StepParameter.objects.create(
+            name='Output List',
+            description='The outputs to set.',
+            value=cleared_outputs,
+            step=clear_outputs_step
+        )
+        direction = models.StepParameter.objects.create(
+            name='On',
+            description='Whether or not to turn on or off the outputs.',
+            value='False',
+            step=clear_outputs_step
+        )
+
         Template.objects.create(
             name='Initialize Microscan',
             description='Contains the data to send to the scanner to initialize'

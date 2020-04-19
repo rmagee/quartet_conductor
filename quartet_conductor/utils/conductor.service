@@ -7,7 +7,8 @@ StartLimitIntervalSec=0
 Type=simple
 Restart=always
 RestartSec=1
-ExecStart=/home/pi/.virtualenvs/qu4rtet/bin/python /home/pi/quartet_conductor/quartet_conductor/microscan/inputs.py
+ExecStart=/home/pi/.virtualenvs/qu4rtet/bin/python /home/pi/quartet_conductor/quartet_conductor/microscan/inputs.py --readyOutput=2
+ExecStop=/home/pi/.virtualenvs/qu4rtet/bin/python /home/pi/quartet_conductor/quartet_conductor/microscan/inputs.py --readyOutput=2 -s
 
 [Install]
 WantedBy=multi-user.target
