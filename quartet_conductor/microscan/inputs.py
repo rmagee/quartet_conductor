@@ -28,6 +28,7 @@ from typing import Optional, Callable, Any, Iterable, Mapping
 from quartet_capture.models import Rule
 from quartet_capture.tasks import create_and_queue_task
 from quartet_conductor.models import InputMap
+from quartet_conductor import settings as conductor_settings
 from revpy_dio.inputs import InputMonitor as IM
 from revpy_dio.outputs import set_output
 
@@ -44,8 +45,9 @@ class ThreadedInputMonitor(IM):
     and input 2 to send a label.
     """
 
-    def __init__(self, sleep_interval: float = .10):
-        super().__init__(sleep_interval)
+    def __init__(self, sleep_interval: float = .10,
+                 left=conductor_settings.DIO_LEFT):
+        super().__init__(sleep_interval, left=left)
         self.session = None
         self.input_maps = {}
 
@@ -146,9 +148,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if not args.stop:
         if args.readyOutput != '-1':
-            set_output(int(args.readyOutput))
+            set_output(int(args.readyOutput), on=True,
+                       left=conductor_settings.DIO_LEFT)
         input = ThreadedInputMonitor(sleep_interval=.10)
         input.run()
     else:
-        set_output(int(args.readyOutput), on=False)
+        set_output(int(args.readyOutput), on=False,
+                   left=conductor_settings.DIO_LEFT)
     # test sync

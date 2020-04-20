@@ -145,7 +145,7 @@ class TelnetStep(rules.Step):
 
     def on_failure(self):
         if conductor_settings.OUTPUT_CONTROL:
-            outputs.set_output(self.error_output, True)
+            outputs.set_output(self.error_output, True, conductor_settings.DIO_LEFT)
 
 
 class SetOutputsStep(rules.Step):
@@ -165,7 +165,8 @@ class SetOutputsStep(rules.Step):
         list = output_list.split(',')
         self.info('Setting the outputs %s to %s.', output_list, on)
         if conductor_settings.OUTPUT_CONTROL:
-            [outputs.set_output(int(l.strip()), on=on) for l in list]
+            left = conductor_settings.DIO_LEFT
+            [outputs.set_output(int(l.strip()), on=on, left=left) for l in list]
 
     @property
     def declared_parameters(self):

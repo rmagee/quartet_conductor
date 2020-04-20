@@ -31,6 +31,7 @@ from serialbox.models import Pool
 from serialbox.response import Response
 from rest_framework.exceptions import NotFound
 import time
+
 logger = getLogger(__name__)
 
 
@@ -97,7 +98,7 @@ class JobFieldsStep(TelnetStep):
         self.error_output = int(self.get_or_create_parameter(
             'Error Output Port', '6',
             'The output to raise high when the printer can not be reached, '
-                                 'default is 6.'
+            'default is 6.'
         ))
 
     def execute(self, data, rule_context: RuleContext):
@@ -110,7 +111,7 @@ class JobFieldsStep(TelnetStep):
             client.close()
             self.info('Data retrieved: %s', ret)
             print(ret)
-            if 'JDL' not in ret.decode('utf-8') :
+            if 'JDL' not in ret.decode('utf-8'):
                 raise PrinterError('The printer did not return the expected '
                                    'JDL reply.  Please check the printer.')
             ret = ret.decode('ascii').split('|')
@@ -131,14 +132,16 @@ class JobFieldsStep(TelnetStep):
     def declared_parameters(self):
         params = super().declared_parameters
         params['IO Port'] = 'The input port that the printer will respond to ' \
-                           'if applicable.'
+                            'if applicable.'
         return params
 
     def on_failure(self):
-        self.error('There was a problem...setting the error output of % s high '
-                   'and exiting.', self.error_output)
+        self.error(
+            'There was a problem...setting the error output of % s high '
+            'and exiting.', self.error_output)
         if conductor_settings.OUTPUT_CONTROL:
-            set_output(self.error_output, on=True)
+            set_output(self.error_output, on=True,
+                       left=conductor_settings.DIO_LEFT)
 
 
 class NoJobFieldsError(Exception):
@@ -147,8 +150,10 @@ class NoJobFieldsError(Exception):
     """
     blink = 2
 
+
 class PrinterError(Exception):
     blink = 3
+
 
 class GetSerialIdentifierStep(Step):
     """
@@ -276,7 +281,7 @@ class PrintLabelStep(TelnetStep):
             'JDA|{0}={1}|',
             self.declared_parameters.get('Printer Command')
         )
-        self.printer_command.replace('`','\r')
+        self.printer_command.replace('`', '\r')
 
     def execute(self, data, rule_context: RuleContext):
         with Telnet(self.host, self.port, timeout=self.timeout) as client:
@@ -314,7 +319,7 @@ class PrintLabelStep(TelnetStep):
             client.write(command)
             ret = client.read_until('\r'.encode('ascii'))
             self.info('Data retrieved: %s', ret)
-            if 'ACK' not in ret.decode('utf-8') :
+            if 'ACK' not in ret.decode('utf-8'):
                 raise PrinterError('The printer did not return the expected '
                                    'ACK reply.  Please check the printer.')
             client.close()
