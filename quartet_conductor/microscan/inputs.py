@@ -145,14 +145,21 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Start the input monitor.')
     parser.add_argument('-r', '--readyOutput', required=False, default='-1')
     parser.add_argument('-s', '--stop', required=False, action='store_true')
+    parser.add_argument('-t', '--right', required=False, action='store_true',
+                        help='If the DIO is configured to the right of '
+                                   'the revpi, set this to true to change the '
+                                   'offset.'
+                        )
     args = parser.parse_args()
     if not args.stop:
         if args.readyOutput != '-1':
+            print('Setting output %s' % args.readyOutput)
             set_output(int(args.readyOutput), on=True,
-                       left=conductor_settings.DIO_LEFT)
+                       left=not args.right)
         input = ThreadedInputMonitor(sleep_interval=.10)
         input.run()
     else:
+        print('Setting output %s OFF' % args.readyOutput)
         set_output(int(args.readyOutput), on=False,
-                   left=conductor_settings.DIO_LEFT)
+                   left=not args.right)
     # test sync
