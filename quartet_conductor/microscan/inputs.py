@@ -156,7 +156,7 @@ if __name__ == '__main__':
             print('Setting output %s' % args.readyOutput)
             set_output(int(args.readyOutput), on=True,
                        left=not args.right)
-        input = ThreadedInputMonitor(sleep_interval=.10)
+        input = ThreadedInputMonitor(sleep_interval=.10, left=not args.right)
         input.run()
     else:
         print('Setting output %s OFF' % args.readyOutput)
