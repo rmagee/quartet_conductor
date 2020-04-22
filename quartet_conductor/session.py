@@ -81,7 +81,7 @@ def start_session(lot: str, expiry: str, origin_input: int,
             expiry=expiry,
             state=SessionState.RUNNING.value
         )
-    Session.create_session(cur_session, origin_input, rule_context)
+    Session.create_session(cur_session, int(origin_input), rule_context)
     return cur_session
 
 
@@ -90,7 +90,7 @@ def get_session(origin_input: int) -> Session:
     Returns a session by it's origin input value or identifier.
     :return: A session model instance.
     """
-    cur_session = Session.get_session(origin_input)
+    cur_session = Session.get_session(int(origin_input))
     if not cur_session:
         raise SessionNotActiveError('There is no currently running session '
                                     'for origin_input %s.', origin_input)
