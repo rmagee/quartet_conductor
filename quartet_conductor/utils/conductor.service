@@ -3,6 +3,9 @@ Description=QU4RTET Conductor
 After=network.target
 StartLimitIntervalSec=0
 
+# if the revpi is to the left of the DIO use the below...if it is to the right
+# then there will be a different bit offset for the IO ports and you must
+# use the --right command line argument at the end of ExecStart and ExecStop
 [Service]
 Type=simple
 Restart=always

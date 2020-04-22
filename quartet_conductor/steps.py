@@ -115,7 +115,7 @@ class TelnetStep(rules.Step):
         self.error_output = int(self.get_or_create_parameter(
             'Error Output Port', '8',
             'The output to raise high when the printer can not be reached, '
-                                 'default is 8.'
+            'default is 8.'
         ))
 
     def execute(self, data, rule_context: RuleContext):
@@ -135,6 +135,17 @@ class TelnetStep(rules.Step):
             'Port', '23',
             'The port to send data to.'
         ))
+        self.error_output = int(self.get_or_create_parameter(
+            'Error Output Port', '2',
+            'The output to raise high when the printer can not be reached, '
+            'default is 2.'
+        ))
+        error_output_on = self.get_or_create_parameter(
+            'Error Out On', 'False', 'Whether or not to set the error output '
+                                     'hot or turn it off.  Default is turn '
+                                     'it off.  Set to true to turn on.'
+        )
+        self.error_output_on = error_output_on in ['True', 'true']
 
     @property
     def declared_parameters(self):
@@ -144,8 +155,12 @@ class TelnetStep(rules.Step):
         }
 
     def on_failure(self):
+        self.error(
+            'There was a problem...setting the error output of %s '
+            'and exiting.', self.error_output)
         if conductor_settings.OUTPUT_CONTROL:
-            outputs.set_output(self.error_output, True, conductor_settings.DIO_LEFT)
+            outputs.set_output(self.error_output, on=self.error_output_on,
+                               left=conductor_settings.DIO_LEFT)
 
 
 class SetOutputsStep(rules.Step):
@@ -159,14 +174,15 @@ class SetOutputsStep(rules.Step):
         on = self.get_or_create_parameter('On', 'True',
                                           self.declared_parameters.get(
                                               'On'))
-        on = on in ['True','true']
+        on = on in ['True', 'true']
         output_list = self.get_parameter('Output List', '',
                                          raise_exception=True)
         list = output_list.split(',')
         self.info('Setting the outputs %s to %s.', output_list, on)
         if conductor_settings.OUTPUT_CONTROL:
             left = conductor_settings.DIO_LEFT
-            [outputs.set_output(int(l.strip()), on=on, left=left) for l in list]
+            [outputs.set_output(int(l.strip()), on=on, left=left) for l in
+             list]
 
     @property
     def declared_parameters(self):
@@ -178,6 +194,3 @@ class SetOutputsStep(rules.Step):
 
     def on_failure(self):
         pass
-
-
-

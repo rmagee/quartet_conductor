@@ -91,22 +91,25 @@ class JobFieldsStep(TelnetStep):
             'Port', '777',
             'The text communications port that was enabled on the printer.'
         ))
-        self.input_port = int(self.get_or_create_parameter(
-            'IO Port', '2',
-            'The input port that the printer will respond to if applicable.'
-        ))
         self.error_output = int(self.get_or_create_parameter(
-            'Error Output Port', '6',
+            'Error Output Port', '2',
             'The output to raise high when the printer can not be reached, '
-            'default is 6.'
+            'default is 2.'
         ))
+        error_output_on = self.get_or_create_parameter(
+            'Error Out On', 'False', 'Whether or not to set the error output '
+                                     'hot or turn it off.  Default is turn '
+                                     'it off.  Set to true to turn on.'
+        )
+        self.error_output_on = error_output_on in ['True', 'true']
 
     def execute(self, data, rule_context: RuleContext):
         with Telnet(self.host, self.port, timeout=self.timeout) as client:
+            rule_context.context[ContextFields.IO_PORT.value] = data
             self.info('Getting data from host %s on port %s...',
                       self.host, self.port)
-            data = 'GJD\r'.encode('ascii')
-            client.write(data)  # only output matches
+            command = 'GJD\r'.encode('ascii')
+            client.write(command)  # only output matches
             ret = client.read_until('\r'.encode('ascii'))
             client.close()
             self.info('Data retrieved: %s', ret)
@@ -124,7 +127,6 @@ class JobFieldsStep(TelnetStep):
             rule_context.context[ContextFields.JOB_FIELDS.value] = dict
             rule_context.context[ContextFields.PRINTER_HOST.value] = self.host
             rule_context.context[ContextFields.PRINTER_PORT.value] = self.port
-            rule_context.context[ContextFields.IO_PORT.value] = self.input_port
             logger.info('Rule Context: %s', rule_context.context)
             self.info('%s: %s', __name__, rule_context.context)
 
@@ -134,14 +136,6 @@ class JobFieldsStep(TelnetStep):
         params['IO Port'] = 'The input port that the printer will respond to ' \
                             'if applicable.'
         return params
-
-    def on_failure(self):
-        self.error(
-            'There was a problem...setting the error output of % s high '
-            'and exiting.', self.error_output)
-        if conductor_settings.OUTPUT_CONTROL:
-            set_output(self.error_output, on=True,
-                       left=conductor_settings.DIO_LEFT)
 
 
 class NoJobFieldsError(Exception):
