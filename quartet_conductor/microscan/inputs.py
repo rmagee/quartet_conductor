@@ -59,24 +59,27 @@ class ThreadedInputMonitor(IM):
         :return: None
         """
         # get the IO map if it is not already loaded and execute it's rule
-        print('Handling input %s' % input_number)
-        input_map = self.input_maps.get(input_number)
-        print('input map %s' % input_map)
-        if not input_map:
-            try:
-                print('looking up the input map')
-                input_map = InputMap.objects.select_related('rule').get(
-                    input_number=input_number
-                )
-                self.input_maps[input_number] = input_map
-                print('set the input map now executing the task.')
-            except InputMap.DoesNotExist:
-                s = 'There was no input map for input %s' % input_number
-                print(s)
-                logger.exception(s)
-        print('Executing task...')
-        self.execute_task(input_map, input_number)
-        print('Task executed...')
+        try:
+            print('Handling input %s' % input_number)
+            input_map = self.input_maps.get(input_number)
+            print('input map %s' % input_map)
+            if not input_map:
+                try:
+                    print('looking up the input map')
+                    input_map = InputMap.objects.select_related('rule').get(
+                        input_number=input_number
+                    )
+                    self.input_maps[input_number] = input_map
+                    print('set the input map now executing the task.')
+                except InputMap.DoesNotExist:
+                    s = 'There was no input map for input %s' % input_number
+                    print(s)
+                    logger.exception(s)
+            print('Executing task...')
+            self.execute_task(input_map, input_number)
+            print('Task executed...')
+        except:
+            logger.exception('Unexpected error.')
 
     def execute_task(self, input_map, input_number):
         if not input_map:
@@ -147,8 +150,8 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--stop', required=False, action='store_true')
     parser.add_argument('-t', '--right', required=False, action='store_true',
                         help='If the DIO is configured to the right of '
-                                   'the revpi, set this to true to change the '
-                                   'offset.'
+                             'the revpi, set this to true to change the '
+                             'offset.'
                         )
     args = parser.parse_args()
     if not args.stop:
