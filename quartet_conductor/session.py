@@ -93,7 +93,7 @@ def get_session(origin_input: int) -> Session:
     cur_session = Session.get_session(int(origin_input))
     if not cur_session:
         raise SessionNotActiveError('There is no currently running session '
-                                    'for origin_input %s.', origin_input)
+                                    'for origin_input %s.' % origin_input)
     return cur_session
 
 
