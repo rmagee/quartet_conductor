@@ -226,10 +226,12 @@ class StartSessionStep(Step):
             self.expiry_field_key]
 
     def execute(self, data, rule_context: RuleContext):
+        session_val = int(rule_context.context[ContextFields.IO_PORT.value])
+        self.info('Creating a session for input %s', session_val)
         lot, expiry = self.get_lot_expiry(rule_context)
         session_control.start_session(
             lot, expiry,
-            int(rule_context.context[ContextFields.IO_PORT.value]),
+            session_val,
             rule_context
         )
 
