@@ -214,12 +214,6 @@ class StartSessionStep(Step):
             'EXPIRY',
             self.declared_parameters.get('Expiry Field Key')
         )
-        error_output_on = self.get_or_create_parameter(
-            'Error Out On', 'False', 'Whether or not to set the error output '
-                                     'hot or turn it off.  Default is turn '
-                                     'it off.  Set to true to turn on.'
-        )
-        self.error_output_on = error_output_on in ['True', 'true']
 
     def get_lot_expiry(self, rule_context: RuleContext):
         """
@@ -284,6 +278,12 @@ class PrintLabelStep(TelnetStep):
             self.declared_parameters.get('Printer Command')
         )
         self.printer_command.replace('`', '\r')
+        error_output_on = self.get_or_create_parameter(
+            'Error Out On', 'False', 'Whether or not to set the error output '
+                                     'hot or turn it off.  Default is turn '
+                                     'it off.  Set to true to turn on.'
+        )
+        self.error_output_on = error_output_on in ['True', 'true']
 
     def execute(self, data, rule_context: RuleContext):
         with Telnet(self.host, self.port, timeout=self.timeout) as client:
